@@ -3,7 +3,7 @@ import random
 import sys
 from Bacteria import Bacterium
 
-WORLD_SIZE = 100       # world is 100x100 cells
+WORLD_SIZE = 300       # world is 100x100 cells
 BACTERIA_SIZE = 5         
 NUM_BACTERIA = 500
 FPS = 30
@@ -23,7 +23,7 @@ def create_world(size):
     bacteria_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
     phage_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
     antibiotic_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
-    return food_grid, waste_grid
+    return food_grid, waste_grid, bacteria_grid, phage_grid, antibiotic_grid
 
 
 def draw_world(screen, food_grid, waste_grid):
@@ -56,7 +56,7 @@ def main():
     pygame.display.set_caption("Bacteria Simulation")
     clock = pygame.time.Clock()
 
-    food_grid, waste_grid = create_world(WORLD_SIZE)
+    food_grid, waste_grid, bacteria_grid, phage_grid, antibiotic_grid = create_world(WORLD_SIZE)
 
     bacteria = [
         Bacterium(random.randrange(WORLD_SIZE), random.randrange(WORLD_SIZE))
@@ -69,10 +69,19 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
+                
+        for x in range(WORLD_SIZE):
+            for y in range(WORLD_SIZE):
+                bacteria_grid[x][y] = 0
+        
+        
         # --- Update simulation ---
         for b in bacteria[:]:
-            b.move(WORLD_SIZE, waste_grid, food_grid)
+            if 0 <= b.loc_x < WORLD_SIZE and 0 <= b.loc_y < WORLD_SIZE:
+                bacteria_grid[b.loc_x][b.loc_y] += 1 if b.type == 1 else -1
+                
+        for b in bacteria[:]:
+            b.move(WORLD_SIZE, waste_grid, food_grid, bacteria_grid)
             b.eat(food_grid, waste_grid)
             b.produce_waste(waste_grid, food_grid)
             if b.energy > 50:
