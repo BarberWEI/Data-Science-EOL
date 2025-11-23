@@ -3,7 +3,7 @@ import random
 import sys
 from Bacteria import Bacterium
 
-WORLD_SIZE = 500       # world is 100x100 cells
+WORLD_SIZE = 100       # world is 100x100 cells
 BACTERIA_SIZE = 5         
 NUM_BACTERIA = 500
 FPS = 30
@@ -20,6 +20,9 @@ def create_world(size):
     food_grid = [[random.randint(0, 3) for _ in range(size)] for _ in range(size)]
     # Waste starts empty
     waste_grid = [[0 for _ in range(size)] for _ in range(size)]
+    bacteria_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
+    phage_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
+    antibiotic_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
     return food_grid, waste_grid
 
 
