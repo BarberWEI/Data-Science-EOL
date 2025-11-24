@@ -2,9 +2,9 @@ import pygame
 import random
 import sys
 from Bacteria import Bacterium
-
+import numpy as np
 WORLD_SIZE = 300       # world is 100x100 cells
-BACTERIA_SIZE = 5         
+#BACTERIA_SIZE = 5         
 NUM_BACTERIA = 500
 FPS = 30
 
@@ -14,49 +14,69 @@ PURPLE = (255, 0, 255)
 GREEN = (0, 150, 0)
 RED = (180, 0, 0)
 BLACK = (0, 0, 0)
+world_surface = pygame.Surface((WORLD_SIZE, WORLD_SIZE))
+
+def update_world_surface(world_surface, food_grid, waste_grid):
+    # convert world to a 2d RGB numpy array (VERY FAST)
+    arr = np.zeros((WORLD_SIZE, WORLD_SIZE, 3), dtype=np.uint8)
+
+    arr[food_grid > 0] = (0,150,0)    # green
+    arr[waste_grid > 0] = (180,0,0)  # red
+
+    pygame.surfarray.blit_array(world_surface, arr)
 
 def create_world(size):
-    # Start with scattered food (0–3 units)
-    food_grid = [[random.randint(0, 3) for _ in range(size)] for _ in range(size)]
-    # Waste starts empty
-    waste_grid = [[0 for _ in range(size)] for _ in range(size)]
-    bacteria_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
-    phage_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
-    antibiotic_grid = [[0 for _ in range(WORLD_SIZE)] for _ in range(WORLD_SIZE)]
-    return food_grid, waste_grid, bacteria_grid, phage_grid, antibiotic_grid
+
+    food_grid = np.random.randint(0, 3, (size, size)).astype(np.float32)
+    waste_grid = np.random.randint(0, 3, (size, size)).astype(np.float32)
+
+    bacteria_grid = np.zeros((size, size), dtype=np.float32)
+    bact_attack_grid = np.zeros((size, size), dtype=np.float32)
+    phage_grid = np.zeros((size, size), dtype=np.float32)
+    antibiotic_grid = np.zeros((size, size), dtype=np.float32)
+    
+    return food_grid, waste_grid, bacteria_grid, bact_attack_grid, phage_grid, antibiotic_grid
 
 
-def draw_world(screen, food_grid, waste_grid):
+def draw_world(screen, food_grid, waste_grid, CELL_WIDTH, CELL_HEIGHT):
     for x in range(WORLD_SIZE):
         for y in range(WORLD_SIZE):
+            px = x * CELL_WIDTH
+            py = y * CELL_HEIGHT
 
-            px = x * BACTERIA_SIZE
-            py = y * BACTERIA_SIZE
+            rect = (px, py, CELL_WIDTH, CELL_HEIGHT)
 
             if food_grid[x][y] > 0:
-                pygame.draw.rect(screen, GREEN, (px, py, BACTERIA_SIZE, BACTERIA_SIZE))
+                pygame.draw.rect(screen, GREEN, rect)
             elif waste_grid[x][y] > 0:
-                pygame.draw.rect(screen, RED, (px, py, BACTERIA_SIZE, BACTERIA_SIZE))
+                pygame.draw.rect(screen, RED, rect)
 
 
-def draw_bacteria(screen, bacteria):
+def draw_bacteria(screen, bacteria, CELL_WIDTH, CELL_HEIGHT):
     for b in bacteria:
-        px = b.loc_x * BACTERIA_SIZE
-        py = b.loc_y * BACTERIA_SIZE
-        if b.type == 1:
-            pygame.draw.rect(screen, WHITE, (px, py, BACTERIA_SIZE, BACTERIA_SIZE))
-        else:
-            pygame.draw.rect(screen, PURPLE, (px, py, BACTERIA_SIZE, BACTERIA_SIZE))
+        px = b.loc_x * CELL_WIDTH
+        py = b.loc_y * CELL_HEIGHT
 
+        rect = (px, py, CELL_WIDTH, CELL_HEIGHT)
+
+        color = WHITE if b.type == 1 else PURPLE
+        pygame.draw.rect(screen, color, rect)
 
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WORLD_SIZE * BACTERIA_SIZE, WORLD_SIZE * BACTERIA_SIZE))
+
+    # FULLSCREEN MODE — ALWAYS FITS ANY MONITOR
+    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    screen_width, screen_height = screen.get_size()
     pygame.display.set_caption("Bacteria Simulation")
     clock = pygame.time.Clock()
 
-    food_grid, waste_grid, bacteria_grid, phage_grid, antibiotic_grid = create_world(WORLD_SIZE)
+    # Cell size — stretched to fill screen
+    CELL_WIDTH = screen_width / WORLD_SIZE
+    CELL_HEIGHT = screen_height / WORLD_SIZE
+
+    food_grid, waste_grid, bacteria_grid, bact_attack_grid, phage_grid, antibiotic_grid = create_world(WORLD_SIZE)
 
     bacteria = [
         Bacterium(random.randrange(WORLD_SIZE), random.randrange(WORLD_SIZE))
@@ -64,39 +84,57 @@ def main():
     ]
 
     while True:
-        # --- Event handling ---
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (
+                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 pygame.quit()
                 sys.exit()
-                
-        for x in range(WORLD_SIZE):
-            for y in range(WORLD_SIZE):
-                bacteria_grid[x][y] = 0
-        
-        
-        # --- Update simulation ---
+
+        # Reset bacteria grid
+        bacteria_grid.fill(0)
+        bact_attack_grid.fill(0)
+        # for x in range(WORLD_SIZE):
+        #     for y in range(WORLD_SIZE):
+        #         bacteria_grid[x][y] = 0
+        #         bact_attack_grid[x][y] = 0
+        bxs = np.array([b.loc_x for b in bacteria])
+        bys = np.array([b.loc_y for b in bacteria])
+        types = np.array([b.type for b in bacteria])
+
+        bacteria_grid.fill(0)
+        bacteria_grid[bxs, bys] += np.where(types == 1, 1, -1)
+
         for b in bacteria[:]:
-            if 0 <= b.loc_x < WORLD_SIZE and 0 <= b.loc_y < WORLD_SIZE:
-                bacteria_grid[b.loc_x][b.loc_y] += 1 if b.type == 1 else -1
-                
+            b.emit_attack(bact_attack_grid, WORLD_SIZE)
+            
+        # Update bacteria
         for b in bacteria[:]:
-            b.move(WORLD_SIZE, waste_grid, food_grid, bacteria_grid)
+            move_decision = b.move(WORLD_SIZE, waste_grid, food_grid, bacteria_grid)
             b.eat(food_grid, waste_grid)
             b.produce_waste(waste_grid, food_grid)
-            if b.energy > 50:
-                bacteria.append(b.split())
+            damage = bact_attack_grid[b.loc_x][b.loc_y]
+
+            b.energy -= damage
+            b.energy += b.attack
             if b.is_dead():
                 bacteria.remove(b)
-
+                continue
+            elif move_decision == 0:
+                continue
+            elif move_decision == 2:
+                bacteria.append(b.split())
+        print(len(bacteria))
+        
         # --- Drawing ---
         screen.fill(BLACK)
-        draw_world(screen, food_grid, waste_grid)
-        draw_bacteria(screen, bacteria)
+        update_world_surface(world_surface, food_grid, waste_grid)
+        scaled = pygame.transform.scale(world_surface, screen.get_size())
+        screen.blit(scaled, (0,0))
+        
+        draw_bacteria(screen, bacteria, CELL_WIDTH, CELL_HEIGHT)
 
         pygame.display.flip()
         clock.tick(FPS)
-
 
 if __name__ == "__main__":
     main()
