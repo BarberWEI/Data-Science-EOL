@@ -13,9 +13,9 @@ class Bacterium:
         self.immunity_antimicro = 1
         self.attack = 1
         self.energy = 10 if self.type == 1 else 10
-        self.move_model = Move_model(110, [16,16], 6)
+        self.move_model = Move_model(77, [16, 16], 6)
         self.points = 0
-        self.noise = torch.randn((6,6)) * 0.5
+        self.noise = torch.randn((5, 5)) * 0.5
         with torch.no_grad():
             for param in self.move_model.parameters():
                 param.add_(torch.randn_like(param) * 0.1)
@@ -27,7 +27,7 @@ class Bacterium:
         local_waste = []
         local_bacteria = []
 
-        offsets = [-3, -2, -1, 0, 1, 2]
+        offsets = [-2, -1, 0, 1, 2]
 
         for dy in offsets:
             food_row = []
@@ -58,14 +58,17 @@ class Bacterium:
         bacteria_tensor = torch.tensor(local_bacteria, dtype=torch.float32) / 5.0 +  self.noise
         energy_tensor = torch.tensor([self.energy / 30.0], dtype=torch.float32)
         type_tensor = torch.tensor([self.type], dtype=torch.float32)
-        
+        # loc_x = torch.tensor([self.loc_x / WORLD_SIZE], dtype=torch.float32)
+        # loc_y = torch.tensor([self.loc_y / WORLD_SIZE], dtype=torch.float32)
         # stack into 3-channel tensor
         final_tensor = torch.cat([
             food_tensor.flatten(),
             waste_tensor.flatten(),
             bacteria_tensor.flatten(),
             energy_tensor,
-            type_tensor
+            type_tensor,
+            # loc_x,
+            # loc_y
         ])
 
 
@@ -97,13 +100,13 @@ class Bacterium:
         #print(max_value, max_index)
         if max_index == 0 and self.points > 0:
             #print("did nothing")
-            self.immunity_phage += 1
+            self.immunity_phage += 0.05
             self.points -= 1
             self.attack -= 0.005
             self.immunity_antimicro -= 0.005
             return 0
         elif max_index == 1 and self.points > 0:
-            self.attack += 1
+            self.attack += 5
             self.points -= 1
             self.immunity_antimicro -= 0.005
             self.immunity_phage -= 0.005
@@ -114,7 +117,7 @@ class Bacterium:
             self.points += 5
             return 2
         elif max_index == 3 and self.points > 0:
-            self.immunity_antimicro += 1
+            self.immunity_antimicro += 0.05
             self.points -= 1
             self.attack -= 0.005
             self.immunity_phage -= 0.005
@@ -128,15 +131,22 @@ class Bacterium:
         #     return
     
     def eat(self, food_grid, waste_grid):
-        if self.type == 1 and food_grid[self.loc_x][self.loc_y] > 0:
+        x, y = int(self.loc_x), int(self.loc_y)
+        if self.type == 1 and food_grid[x][y] > 0:
             self.energy += 2
-            food_grid[self.loc_x][self.loc_y] -= 1
-        elif self.type == 0 and waste_grid[self.loc_x][self.loc_y] > 0:
+            food_grid[x][y] -= 1
+        elif self.type == 0 and waste_grid[x][y] > 0:
             self.energy += 2
-            waste_grid[self.loc_x][self.loc_y] -= 1
+            waste_grid[x][y] -= 1
         else:
-            self.energy -= 3 if self.type == 1 else 3
-        
+            self.energy -= 2.5
+
+    def produce_waste(self, waste_grid, food_grid):
+        x, y = int(self.loc_x), int(self.loc_y)
+        if self.type == 1:
+            waste_grid[x][y] += 1
+        else:
+            food_grid[x][y] += 1
             
     def split(self):
         child = Bacterium(self.loc_x, self.loc_y)
@@ -144,7 +154,7 @@ class Bacterium:
         child.immunity_phage = self.immunity_phage / 4
         child.immunity_antimicro = self.immunity_antimicro / 4
         child.attack = self.attack / 4
-        child.energy = self.energy / 5
+        child.energy = self.energy / 4
         self.energy = self.energy / 4
         
         # copy parent's move_model weights with mutation
@@ -178,14 +188,8 @@ class Bacterium:
 
         return self.point_decisions(actions[2], actions[3], actions[4], actions[5])
 
-    def produce_waste(self, waste_grid, food_grid):
-        if self.type == 1:
-            waste_grid[self.loc_x][self.loc_y] += 1
-        else:
-            food_grid[self.loc_x][self.loc_y] += 1
-
 
     def is_dead(self):
-        return self.energy <= 0
+        return self.energy <= 0 or self.immunity_antimicro <= 0 or self.immunity_phage <= 0
     
     

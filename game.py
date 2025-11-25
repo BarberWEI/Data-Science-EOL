@@ -111,6 +111,7 @@ def main():
         for b in bacteria[:]:
             move_decision = b.move(WORLD_SIZE, waste_grid, food_grid, bacteria_grid)
             b.eat(food_grid, waste_grid)
+            
             b.produce_waste(waste_grid, food_grid)
             damage = bact_attack_grid[b.loc_x][b.loc_y]
 
