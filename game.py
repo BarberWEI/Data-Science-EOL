@@ -5,7 +5,7 @@ from Bacteria import Bacterium
 import numpy as np
 WORLD_SIZE = 300       # world is 100x100 cells
 #BACTERIA_SIZE = 5         
-NUM_BACTERIA = 500
+NUM_BACTERIA = 1000
 FPS = 30
 
 # Colors
@@ -26,7 +26,7 @@ def update_world_surface(world_surface, food_grid, waste_grid):
     pygame.surfarray.blit_array(world_surface, arr)
 
 def create_world(size):
-
+    #initial_grid = np.random.randint(0, 3, (size, size)).astype(np.float32)
     food_grid = np.random.randint(0, 3, (size, size)).astype(np.float32)
     waste_grid = np.random.randint(0, 3, (size, size)).astype(np.float32)
 
@@ -71,7 +71,7 @@ def main():
     screen_width, screen_height = screen.get_size()
     pygame.display.set_caption("Bacteria Simulation")
     clock = pygame.time.Clock()
-
+    round_num = 0
     # Cell size — stretched to fill screen
     CELL_WIDTH = screen_width / WORLD_SIZE
     CELL_HEIGHT = screen_height / WORLD_SIZE
@@ -84,6 +84,9 @@ def main():
     ]
 
     while True:
+        round_num += 1
+        if len(bacteria) > 40000:
+            break
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (
                 event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
@@ -93,12 +96,9 @@ def main():
         # Reset bacteria grid
         bacteria_grid.fill(0)
         bact_attack_grid.fill(0)
-        # for x in range(WORLD_SIZE):
-        #     for y in range(WORLD_SIZE):
-        #         bacteria_grid[x][y] = 0
-        #         bact_attack_grid[x][y] = 0
-        bxs = np.array([b.loc_x for b in bacteria])
-        bys = np.array([b.loc_y for b in bacteria])
+ 
+        bxs = np.array([int(b.loc_x) for b in bacteria])
+        bys = np.array([int(b.loc_y) for b in bacteria])
         types = np.array([b.type for b in bacteria])
 
         bacteria_grid.fill(0)
@@ -108,24 +108,35 @@ def main():
             b.emit_attack(bact_attack_grid, WORLD_SIZE)
             
         # Update bacteria
+        should_make_waste = round_num % 5 == 0
         for b in bacteria[:]:
             move_decision = b.move(WORLD_SIZE, waste_grid, food_grid, bacteria_grid)
             b.eat(food_grid, waste_grid)
             
-            b.produce_waste(waste_grid, food_grid)
+            b.produce_waste(waste_grid, food_grid) if should_make_waste else None
+            
+            b.check_immunity(round_num if round_num < 5000 else 5000)
+            
+            b.increase_age()
+            
             damage = bact_attack_grid[b.loc_x][b.loc_y]
 
             b.energy -= damage
             b.energy += b.attack
+
             if b.is_dead():
                 bacteria.remove(b)
                 continue
-            elif move_decision == 0:
-                continue
             elif move_decision == 2:
                 bacteria.append(b.split())
-        print(len(bacteria))
+                
+        oldest_bacteria = max(bacteria, key=lambda b: b.age) 
+        most_splitty_bacteria = max(bacteria, key=lambda b: b.split_num)
         
+        print(oldest_bacteria.age, most_splitty_bacteria.split_num)
+        
+        
+        #print(round_num)
         # --- Drawing ---
         screen.fill(BLACK)
         update_world_surface(world_surface, food_grid, waste_grid)

@@ -17,5 +17,5 @@ class Move_model(nn.Module):
         x = self.fc2(x)
         x = self.relu(x)
         x = self.fc3(x)
-        x = self.tanh(x)
+        #x = self.tanh(x)
         return x
