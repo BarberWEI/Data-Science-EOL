@@ -5,7 +5,7 @@ from Bacteria import Bacterium
 import numpy as np
 WORLD_SIZE = 300       # world is 100x100 cells
 #BACTERIA_SIZE = 5         
-NUM_BACTERIA = 1000
+NUM_BACTERIA = 10000
 FPS = 30
 
 # Colors
@@ -108,12 +108,12 @@ def main():
             b.emit_attack(bact_attack_grid, WORLD_SIZE)
             
         # Update bacteria
-        should_make_waste = round_num % 5 == 0
+        should_make_waste = round_num % 2 == 0
         for b in bacteria[:]:
             move_decision = b.move(WORLD_SIZE, waste_grid, food_grid, bacteria_grid)
             b.eat(food_grid, waste_grid)
             
-            b.produce_waste(waste_grid, food_grid) if should_make_waste else None
+            b.produce_waste(waste_grid, food_grid) 
             
             b.check_immunity(round_num if round_num < 5000 else 5000)
             
