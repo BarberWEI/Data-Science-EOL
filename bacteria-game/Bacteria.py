@@ -150,7 +150,7 @@ class Bacterium:
             waste_grid[x][y] -= 1
             # food_grid[x][y] += 1
         else:
-            self.energy -= 3
+            self.energy -= 2
             
 
 
