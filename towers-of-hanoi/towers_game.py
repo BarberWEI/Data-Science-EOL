@@ -8,10 +8,13 @@ class Towers():
         self.tower = copy.deepcopy(self.initial_tower)
         self.moves_made = 0
         self.target_tower = [[], [], [i for i in range(disk_amount, 0, -1)]]
-     
+        self.previous_moves = self.moves_to_solve()
+       
+        
     def reset(self):
         self.tower = copy.deepcopy(self.initial_tower)
         self.moves_made = 0
+        
         
     def is_legal(self, from_loc, to_loc):
         if len(self.tower[from_loc]) == 0:
@@ -27,18 +30,65 @@ class Towers():
             disk = self.tower[from_loc].pop()
             self.tower[to_loc].append(disk)
             self.moves_made += 1
-            reward = 1 if self.complteted() else 0 # Simple reward
+            
+            reward_multiplier = 0.1
+            moves_to_solve =self.moves_to_solve()
+            # reward bot based on move performed as well as if they completed the puzzle
+            
+            reward = reward_multiplier * (self.previous_moves - moves_to_solve())  
+            self.previous_moves = moves_to_solve
+            reward += 100 if self.complteted() else 0
             
             return self.get_tower(), reward, self.completed(), ":D"
         else:
             # heavily penalize ilegal moves
-            return self.get_tower(), -100, False, "Illegal move"
+            return self.get_tower(), -1000, False, "Illegal move"
  
         
     def get_tower(self):
         return copy.deepcopy(self.tower)
     
+    
     def completed(self):
         return self.tower == self.target_tower
     
     
+    # GPT wrote this 
+    def moves_to_solve(self, target=2):
+        """
+        state: [peg0_list, peg1_list, peg2_list]
+        returns minimum number of moves to reach the solved configuration.
+        """
+        # Flatten with peg locations
+        peg_of = {}
+        for peg, lst in enumerate(self.tower):
+            for disk in lst:
+                peg_of[disk] = peg
+        
+        # Largest disk in puzzle
+        n = max(peg_of.keys())
+
+        # Recursive helper
+        def solve_up_to(k, target):
+            # If k == 0, nothing to move
+            if k == 0:
+                return 0
+            
+            # If disk k is already on target, skip it and check smaller disks
+            if peg_of[k] == target:
+                return solve_up_to(k - 1, target)
+            
+            # Identify auxiliary peg
+            other_pegs = {0, 1, 2}
+            src = peg_of[k]
+            aux = list(other_pegs - {src, target})[0]
+
+            # We must:
+            # 1. Move disks 1..k-1 to aux peg
+            # 2. Move disk k to target = 1 move
+            # 3. Move disks 1..k-1 from aux to target (fully optimal = 2^(k-1)-1 moves)
+            return (solve_up_to(k - 1, aux)
+                    + 1
+                    + (2**(k - 1) - 1))
+
+        return solve_up_to(n, target)
