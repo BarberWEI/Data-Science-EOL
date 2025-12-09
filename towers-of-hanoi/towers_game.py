@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import torch
 
 class Towers():
     def __init__(self, disk_amount):
@@ -14,7 +15,7 @@ class Towers():
     def reset(self):
         self.tower = copy.deepcopy(self.initial_tower)
         self.moves_made = 0
-        
+    
         
     def is_legal(self, from_loc, to_loc):
         if len(self.tower[from_loc]) == 0:
@@ -32,7 +33,7 @@ class Towers():
             self.moves_made += 1
             
             reward_multiplier = 0.1
-            moves_to_solve =self.moves_to_solve()
+            moves_to_solve = self.moves_to_solve()
             # reward bot based on move performed as well as if they completed the puzzle
             
             reward = reward_multiplier * (self.previous_moves - moves_to_solve())  
@@ -48,6 +49,18 @@ class Towers():
     def get_tower(self):
         return copy.deepcopy(self.tower)
     
+
+    def encode_state(self, disk_amount):
+        # this returns an encoded version of the towers game,
+        # which makes it better for model training
+        endcoded = np.zeros(disk_amount * 3, dtype=np.float32)
+
+        for peg_idx, peg in enumerate(self.tower):
+            for disk in peg:
+                endcoded[(disk - 1) * 3 + peg_idx] = 1.0
+
+        return torch.tensor(endcoded)
+
     
     def completed(self):
         return self.tower == self.target_tower
