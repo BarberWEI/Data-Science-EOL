@@ -1,12 +1,14 @@
-from towers_game import Towers
-from move_model import Move_model
+from towers_game import Tower
+from move_model import HanoiModel
 import torch
 
 class Agent():
     def __init__(self, disk_amount):
-        self.move_model = Move_model(disk_amount)
+        self.move_model = HanoiModel(disk_amount)
         self.point = 0
         
+    def is_dead(self):
+        return self.point < -1000    
         
     def pick_move(self, state):
         model_output = self.move_model.forward(state)
@@ -36,5 +38,5 @@ class Agent():
     def set_model_weights(self, weights):
         self.move_model.load_state_dict(weights)
 
-    def set_points(self, additional_points):
-        self.points += additional_points
+    def add_points(self, additional_points):
+        self.point += additional_points

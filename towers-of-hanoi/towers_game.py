@@ -2,12 +2,14 @@ import numpy as np
 import copy
 import torch
 
-class Towers():
+class Tower():
     def __init__(self, disk_amount):
         # this makes it so that initial tower is something like 8, 7, 6, 5, 4, 3, 2, 1 with two blank rows
+        self.disk_amount = disk_amount
         self.initial_tower = [[i for i in range(disk_amount, 0, -1)], [], []] 
         self.tower = copy.deepcopy(self.initial_tower)
         self.moves_made = 0
+        self.min_moves = self.moves_to_solve()
         self.target_tower = [[], [], [i for i in range(disk_amount, 0, -1)]]
         self.previous_moves = self.moves_to_solve()
        
@@ -25,7 +27,9 @@ class Towers():
         # can't put bigger on smaller
         return self.tower[from_loc][-1] < self.tower[to_loc][-1]
 
-
+    def get_initial_state(self):
+        return self.encode_state(), 0, self.completed(), ":D"
+    
     def step(self, from_loc, to_loc):
         if self.is_legal(from_loc, to_loc):
             disk = self.tower[from_loc].pop()
@@ -33,32 +37,34 @@ class Towers():
             self.moves_made += 1
             
             reward_multiplier = 0.1
-            moves_to_solve = self.moves_to_solve()
+            moves_left = self.moves_to_solve()
             # reward bot based on move performed as well as if they completed the puzzle
             
-            reward = reward_multiplier * (self.previous_moves - moves_to_solve())  
-            self.previous_moves = moves_to_solve
-            reward += 100 if self.complteted() else 0
+            reward = reward_multiplier * (self.previous_moves - moves_left)  
+            self.previous_moves = moves_left
+            reward += 100 if self.completed() else 0
             
-            return self.get_tower(), reward, self.completed(), ":D"
+            return self.encode_state(), reward, self.completed(), ":D"
         else:
             # heavily penalize ilegal moves
-            return self.get_tower(), -1000, False, "Illegal move"
+            return self.encode_state(), -10000, False, "Illegal move"
  
         
     def get_tower(self):
         return copy.deepcopy(self.tower)
     
 
-    def encode_state(self, disk_amount):
+    def encode_state(self):
         # this returns an encoded version of the towers game,
         # which makes it better for model training
-        endcoded = np.zeros(disk_amount * 3, dtype=np.float32)
+        # essentially, each disk is one hot encoded so that 1,0,0 
+        # means the disk is in the first peg
+        endcoded = np.zeros(self.disk_amount * 3, dtype=np.float32)
 
         for peg_idx, peg in enumerate(self.tower):
             for disk in peg:
                 endcoded[(disk - 1) * 3 + peg_idx] = 1.0
-
+    
         return torch.tensor(endcoded)
 
     
