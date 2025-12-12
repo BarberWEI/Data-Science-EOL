@@ -4,19 +4,22 @@ import torch
 import copy
 import random
 
+agent_amount = 1000
+disk_amount = 4
+
 def get_best_agents(agents):
     # https://stackoverflow.com/questions/8966538/syntax-behind-sortedkey-lambda
     top_20 = sorted(agents, key=lambda agent: agent.point, reverse=True)[:20]
     return top_20
 
 
-def make_new_models(best_agents, total_new=100, mutation_rate=0.1, mutation_strength=0.1):
+def make_new_models(best_agents, total_new=agent_amount, mutation_rate=0.3, mutation_strength=0.1):
     new_agents = []
 
     while len(new_agents) < total_new:
         
         parent = random.choice(best_agents)
-        child = Agent(3)
+        child = Agent(disk_amount)
         
         # this is just 
         child.move_model.load_state_dict(copy.deepcopy(parent.move_model.state_dict()))
@@ -36,15 +39,15 @@ def make_new_models(best_agents, total_new=100, mutation_rate=0.1, mutation_stre
 towers = []
 agents = []
 
-for _ in range(100):
-    towers.append(Tower(3))
-    agents.append(Agent(3))
+for _ in range(agent_amount):
+    towers.append(Tower(disk_amount))
+    agents.append(Agent(disk_amount))
 
 
 agent_max_moves = towers[0].min_moves * 3
 completed = False
 
-for _ in range(100):
+while not completed:
     # state = towers[0].get_initial_state()
     # tower_state = state[0].unsqueeze(0)
     for agent_idx in range(len(agents)):
@@ -70,9 +73,7 @@ for _ in range(100):
     print(best_agent.moves_made, "step 2")
     print(best_agent.way_of_end, "step 3")
     agents = make_new_models(get_best_agents(agents))
-    towers = [Tower(3) for _ in range(100)]
+    towers = [Tower(disk_amount) for _ in range(agent_amount)]
 
-
-    
-
-
+best_agent = max(agents, key=lambda agent: agent.point)
+torch.save(best_agent, "towers_of_hanoi/models/best_agent_full.pth")

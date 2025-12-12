@@ -40,7 +40,7 @@ class Tower():
             moves_left = self.moves_to_solve()
             # reward bot based on move performed as well as if they completed the puzzle
             
-            reward = reward_multiplier * ((self.previous_moves - moves_left))  
+            reward = reward_multiplier * ((self.previous_moves - moves_left)-0.5)  
             self.previous_moves = moves_left
             reward += 100 if self.completed() else 0
             
