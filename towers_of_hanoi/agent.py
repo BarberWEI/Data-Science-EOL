@@ -8,7 +8,7 @@ class Agent():
         self.point = 0
         self.moves_made = 0
         self.way_of_end = 0
-        
+        self.disk_amount = disk_amount
     def is_dead(self):
         return self.point < -1000    
     def reset(self):
