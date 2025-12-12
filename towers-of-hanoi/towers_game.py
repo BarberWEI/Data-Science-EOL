@@ -29,7 +29,7 @@ class Tower():
 
     def get_initial_state(self):
         return self.encode_state(), 0, self.completed(), ":D"
-    
+        
     def step(self, from_loc, to_loc):
         if self.is_legal(from_loc, to_loc):
             disk = self.tower[from_loc].pop()
@@ -40,13 +40,14 @@ class Tower():
             moves_left = self.moves_to_solve()
             # reward bot based on move performed as well as if they completed the puzzle
             
-            reward = reward_multiplier * (self.previous_moves - moves_left)  
+            reward = reward_multiplier * ((self.previous_moves - moves_left))  
             self.previous_moves = moves_left
             reward += 100 if self.completed() else 0
             
             return self.encode_state(), reward, self.completed(), ":D"
         else:
             # heavily penalize ilegal moves
+            self.moves_made += 1
             return self.encode_state(), -10000, False, "Illegal move"
  
         

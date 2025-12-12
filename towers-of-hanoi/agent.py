@@ -6,12 +6,20 @@ class Agent():
     def __init__(self, disk_amount):
         self.move_model = HanoiModel(disk_amount)
         self.point = 0
+        self.moves_made = 0
+        self.way_of_end = 0
         
     def is_dead(self):
         return self.point < -1000    
+    def reset(self):
+        self.point = 0
+        self.moves_made = 0
+        self.way_of_end = 0
+
         
     def pick_move(self, state):
-        model_output = self.move_model.forward(state)
+        with torch.no_grad():
+            model_output = self.move_model.forward(state)
         
         # this list just means from first one to second one, 
         # and it is supposed to match the ideas of the model output
