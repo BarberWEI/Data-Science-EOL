@@ -41,7 +41,18 @@ class Agent():
         idx = torch.argmax(model_output).item()
         
         return move_list[idx]
+
+    # This I think is jus trequired for SHAP 
+    # https://shap.readthedocs.io/en/latest/example_notebooks/overviews/An%20introduction%20to%20explainable%20AI%20with%20Shapley%20values.html
+    def predict(self, x_numpy):
+        x_tensor = torch.tensor(x_numpy, dtype=torch.float32)
+        with torch.no_grad():
+            out = self.forward(x_tensor)
+        return out.numpy()
     
+    # this is also support for SHAP
+    def forward(self, x):
+        return self.move_model(x)
 
     def get_model_weights(self):
         return self.move_model.state_dict()

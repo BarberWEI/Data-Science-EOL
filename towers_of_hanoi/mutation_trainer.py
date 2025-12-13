@@ -6,7 +6,7 @@ import random
 
 
 agent_amount = 10000
-disk_amount = 5
+disk_amount = 4
 
 def get_best_agents(agents):
     # https://stackoverflow.com/questions/8966538/syntax-behind-sortedkey-lambda
@@ -27,13 +27,13 @@ def make_new_models(best_agents, total_new=agent_amount, mutation_rate=0.3, muta
 
         # Mutate the wweights
         with torch.no_grad():
-            for param in child.move_model.parameters():
+            for p in child.move_model.parameters():
                 # random mask for mutation  
                 # https://docs.pytorch.org/docs/stable/generated/torch.rand_like.html
                 # https://medium.com/@jonas.schumacher/neural-network-layer-masking-in-pytorch-151dd834476e
-                mask = (torch.rand_like(param) < mutation_rate).float()
-                noise = torch.randn_like(param) * mutation_strength
-                param += mask * noise
+                # this is a simple way to mutate. 0.3 chance of mutating and 
+                # each time mutating by strength of .1 times some random number
+                p += (torch.rand_like(p) < mutation_rate) * torch.randn_like(p) * mutation_strength
 
         new_agents.append(child)
 
@@ -41,6 +41,7 @@ def make_new_models(best_agents, total_new=agent_amount, mutation_rate=0.3, muta
 
 towers = []
 agents = []
+max_scores = []
 
 for _ in range(agent_amount):
     towers.append(Tower(disk_amount))
@@ -75,6 +76,7 @@ while not completed and runs < 200:
         current_agent.moves_made = current_tower.moves_made
         
     best_agent = max(agents, key=lambda agent: agent.point)
+    max_scores.append(best_agent.point)
     print(best_agent.point, "step 1")
     print(best_agent.moves_made, "step 2")
     print(best_agent.way_of_end, "step 3")
@@ -83,3 +85,12 @@ while not completed and runs < 200:
     runs += 1
 torch.save(best_agent.move_model.state_dict(), "towers_of_hanoi/models/best_agent.pth")
 
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10,5))
+plt.plot(max_scores, marker='o')
+plt.title("Max Score per Generation")
+plt.xlabel("Generation")
+plt.ylabel("Max Score")
+plt.grid(True)
+plt.show()
