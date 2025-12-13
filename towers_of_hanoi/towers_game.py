@@ -29,18 +29,8 @@ class Tower():
 
     def get_initial_state(self):
         return self.encode_state(), 0, self.completed(), ":D"
-    
-    def is_valid_state(self):
-        for peg in self.tower:
-            if peg != sorted(peg, reverse=True):
-                return False
-        return True
 
-    
     def step(self, from_loc, to_loc):
-        if not self.is_valid_state():
-            # reward illegal/bad state
-            return self.encode_state(), -5, False, "Invalid"
 
         if self.is_legal(from_loc, to_loc):
             disk = self.tower[from_loc].pop()
@@ -48,12 +38,11 @@ class Tower():
             self.moves_made += 1
             
             moves_left = self.moves_to_solve()
-            reward = self.previous_moves - moves_left - 0.5
+            
+            reward = 0
+            #reward = -.1
             # reward bot based on move performed as well as if they completed the puzzle
-            # if self.previous_moves > moves_left :
-            #     reward += 1
-            # else:
-            #     reward -= 2
+            reward = 0.1 * (self.previous_moves - moves_left)
             self.previous_moves = moves_left
             reward += 100 if self.completed() else 0
             
@@ -85,8 +74,7 @@ class Tower():
     def completed(self):
         return self.tower == self.target_tower
     
-    
-    # GPT wrote this 
+    # # GPT wrote this 
     def moves_to_solve(self, target=2):
         """
         state: [peg0_list, peg1_list, peg2_list]
