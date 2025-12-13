@@ -41,7 +41,7 @@ class Agent():
         idx = torch.argmax(model_output).item()
         
         return move_list[idx]
-
+    
 
     def get_model_weights(self):
         return self.move_model.state_dict()

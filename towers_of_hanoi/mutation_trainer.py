@@ -6,7 +6,7 @@ import random
 
 
 agent_amount = 10000
-disk_amount = 4
+disk_amount = 5
 
 def get_best_agents(agents):
     # https://stackoverflow.com/questions/8966538/syntax-behind-sortedkey-lambda
